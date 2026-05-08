@@ -6,6 +6,8 @@ import RegisterPage from "../pages/RegisterPage";
 import DashboardPage from "../pages/DashboardPage";
 import TodosPage from "../pages/TodosPage";
 import StatsPage from "../pages/StatsPage";
+import NotesPage from "../pages/NotesPage";
+import ProfileSettingsPage from "../pages/ProfileSettingsPage";
 
 const Router = () => {
   return (
@@ -32,10 +34,28 @@ const Router = () => {
       />
 
       <Route
+        path="/notes"
+        element={
+          <ProtectedRoute>
+            <NotesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/stats"
         element={
           <ProtectedRoute>
             <StatsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile-settings"
+        element={
+          <ProtectedRoute>
+            <ProfileSettingsPage />
           </ProtectedRoute>
         }
       />

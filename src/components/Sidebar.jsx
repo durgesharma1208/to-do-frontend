@@ -1,5 +1,13 @@
 import React from "react";
-import { Home, CheckSquare, Settings, BarChart3, X } from "lucide-react";
+import {
+  Home,
+  CheckSquare,
+  Settings,
+  BarChart3,
+  X,
+  StickyNote,
+  User,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import useUiStore from "../context/uiStore";
 
@@ -7,7 +15,12 @@ const Sidebar = ({ isOpen, onClose }) => {
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: CheckSquare, label: "All Todos", path: "/todos" },
+    { icon: StickyNote, label: "Notes", path: "/notes" },
     { icon: BarChart3, label: "Statistics", path: "/stats" },
+  ];
+
+  const settingsItems = [
+    { icon: User, label: "Profile Settings", path: "/profile-settings" },
   ];
 
   return (
@@ -24,7 +37,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } overflow-y-auto`}
       >
-        <div className="p-6">
+        <div className="p-6 flex flex-col h-full">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-bold">Menu</h2>
             <button
@@ -35,7 +48,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          <nav className="space-y-2">
+          <nav className="space-y-2 flex-1">
             {menuItems.map((item) => (
               <Link
                 key={item.path}
@@ -48,6 +61,20 @@ const Sidebar = ({ isOpen, onClose }) => {
               </Link>
             ))}
           </nav>
+
+          <div className="border-t border-slate-700 pt-4 space-y-2">
+            {settingsItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition group"
+              >
+                <item.icon className="w-5 h-5 group-hover:text-blue-400 transition" />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </aside>
     </>

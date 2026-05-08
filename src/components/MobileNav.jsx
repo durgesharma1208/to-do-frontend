@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, CheckSquare, BarChart3 } from "lucide-react";
+import { Home, CheckSquare, BarChart3, StickyNote } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const MobileNav = () => {
@@ -8,6 +8,7 @@ const MobileNav = () => {
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: CheckSquare, label: "Todos", path: "/todos" },
+    { icon: StickyNote, label: "Notes", path: "/notes" },
     { icon: BarChart3, label: "Stats", path: "/stats" },
   ];
 
@@ -15,12 +16,12 @@ const MobileNav = () => {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30">
-      <div className="flex justify-around">
+      <div className="flex justify-around overflow-x-auto">
         {navItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
-            className={`flex-1 flex flex-col items-center justify-center py-3 transition ${
+            className={`flex-1 flex flex-col items-center justify-center py-3 transition min-w-fit ${
               isActive(item.path)
                 ? "text-blue-600 border-t-2 border-blue-600"
                 : "text-gray-600 hover:text-blue-500"
