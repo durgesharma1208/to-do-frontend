@@ -1,6 +1,8 @@
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+import { createSelector } from "reselect";
 
-const useTodoStore = create((set) => ({
+const todoStore = (set, get) => ({
   todos: [],
   isLoading: false,
   filter: "all",
@@ -22,37 +24,46 @@ const useTodoStore = create((set) => ({
   setFilter: (filter) => set({ filter }),
   setSortBy: (sortBy) => set({ sortBy }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
+});
 
-  getFilteredAndSortedTodos: (state) => {
-    let filtered = state.todos;
+const useTodoStore = create(devtools(todoStore));
 
-    if (state.searchQuery) {
+// Selectors
+const selectTodos = (state) => state.todos;
+const selectFilter = (state) => state.filter;
+const selectSortBy = (state) => state.sortBy;
+const selectSearchQuery = (state) => state.searchQuery;
+
+export const selectFilteredAndSortedTodos = createSelector(
+  [selectTodos, selectFilter, selectSortBy, selectSearchQuery],
+  (todos, filter, sortBy, searchQuery) => {
+    let filtered = [...todos];
+
+    if (searchQuery) {
       filtered = filtered.filter(
         (todo) =>
-          todo.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
+          todo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (todo.description &&
-            todo.description
-              .toLowerCase()
-              .includes(state.searchQuery.toLowerCase())),
+            todo.description.toLowerCase().includes(searchQuery.toLowerCase())),
       );
     }
 
-    if (state.filter === "completed") {
+    if (filter === "completed") {
       filtered = filtered.filter((todo) => todo.completed);
-    } else if (state.filter === "pending") {
+    } else if (filter === "pending") {
       filtered = filtered.filter((todo) => !todo.completed);
     }
 
-    if (state.sortBy === "newest") {
+    if (sortBy === "newest") {
       filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    } else if (state.sortBy === "oldest") {
+    } else if (sortBy === "oldest") {
       filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    } else if (state.sortBy === "dueDate") {
+    } else if (sortBy === "dueDate") {
       filtered.sort(
         (a, b) =>
           (new Date(a.dueDate) || Infinity) - (new Date(b.dueDate) || Infinity),
       );
-    } else if (state.sortBy === "priority") {
+    } else if (sortBy === "priority") {
       const priorityOrder = { High: 0, Medium: 1, Low: 2 };
       filtered.sort(
         (a, b) =>
@@ -62,6 +73,6 @@ const useTodoStore = create((set) => ({
 
     return filtered;
   },
-}));
+);
 
 export default useTodoStore;

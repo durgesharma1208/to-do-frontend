@@ -3,10 +3,11 @@ import {
   Home,
   CheckSquare,
   Settings,
-  BarChart3,
   X,
   StickyNote,
   User,
+  Calendar,
+  Flame,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import useUiStore from "../context/uiStore";
@@ -15,8 +16,9 @@ const Sidebar = ({ isOpen, onClose }) => {
   const menuItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: CheckSquare, label: "All Todos", path: "/todos" },
+    { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: StickyNote, label: "Notes", path: "/notes" },
-    { icon: BarChart3, label: "Statistics", path: "/stats" },
+    { icon: Flame, label: "Productivity", path: "/productivity" },
   ];
 
   const settingsItems = [

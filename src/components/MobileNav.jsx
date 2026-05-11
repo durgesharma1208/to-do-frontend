@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, CheckSquare, BarChart3, StickyNote } from "lucide-react";
+import { Home, CheckSquare, Calendar, StickyNote, Flame } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const MobileNav = () => {
@@ -8,8 +8,9 @@ const MobileNav = () => {
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: CheckSquare, label: "Todos", path: "/todos" },
+    { icon: Calendar, label: "Calendar", path: "/calendar" },
     { icon: StickyNote, label: "Notes", path: "/notes" },
-    { icon: BarChart3, label: "Stats", path: "/stats" },
+    { icon: Flame, label: "Productivity", path: "/productivity" },
   ];
 
   const isActive = (path) => location.pathname === path;

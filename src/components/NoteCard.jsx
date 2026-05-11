@@ -2,13 +2,12 @@ import { useState } from "react";
 import { Trash2, Star } from "lucide-react";
 import useNotesStore from "../context/notesStore";
 import { notesService } from "../services/services";
-import Toast from "./Toast";
+import useUiStore from "../context/uiStore";
 
 export default function NoteCard({ note }) {
   const { updateNote, deleteNote } = useNotesStore();
+  const { showToast } = useUiStore();
   const [loading, setLoading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(note.title);
   const [editedContent, setEditedContent] = useState(note.content);
@@ -26,15 +25,14 @@ export default function NoteCard({ note }) {
     try {
       const response = await notesService.toggleImportant(note._id);
       updateNote(note._id, response.data.data);
-      setToastMessage(
+      showToast(
         response.data.data.isImportant
           ? "Marked as important"
           : "Removed from important",
+        "success",
       );
-      setShowToast(true);
     } catch (error) {
-      setToastMessage("Failed to update note");
-      setShowToast(true);
+      showToast("Failed to update note", "error");
     }
     setLoading(false);
   };
@@ -48,11 +46,9 @@ export default function NoteCard({ note }) {
       });
       updateNote(note._id, response.data.data);
       setIsEditing(false);
-      setToastMessage("Note updated successfully");
-      setShowToast(true);
+      showToast("Note updated successfully", "success");
     } catch (error) {
-      setToastMessage("Failed to update note");
-      setShowToast(true);
+      showToast("Failed to update note", "error");
     }
     setLoading(false);
   };
@@ -62,11 +58,9 @@ export default function NoteCard({ note }) {
     try {
       await notesService.deleteNote(note._id);
       deleteNote(note._id);
-      setToastMessage("Note deleted successfully");
-      setShowToast(true);
+      showToast("Note deleted successfully", "success");
     } catch (error) {
-      setToastMessage("Failed to delete note");
-      setShowToast(true);
+      showToast("Failed to delete note", "error");
     }
     setLoading(false);
   };
@@ -160,13 +154,6 @@ export default function NoteCard({ note }) {
           </>
         )}
       </div>
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          onClose={() => setShowToast(false)}
-          type={toastMessage.includes("Failed") ? "error" : "success"}
-        />
-      )}
     </>
   );
 }

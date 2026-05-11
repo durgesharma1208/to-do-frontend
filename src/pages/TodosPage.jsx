@@ -6,20 +6,16 @@ import TodoModal from "../components/TodoModal";
 import TodoFilters from "../components/TodoFilters";
 import EmptyState from "../components/EmptyState";
 import LoadingSkeleton from "../components/LoadingSkeleton";
-import useTodoStore from "../context/todoStore";
+import useTodoStore, {
+  selectFilteredAndSortedTodos,
+} from "../context/todoStore";
 import useUiStore from "../context/uiStore";
 import { todoService } from "../services/services";
 
 const TodosPage = () => {
-  const {
-    todos,
-    setTodos,
-    updateTodo,
-    deleteTodo,
-    isLoading,
-    setLoading,
-    getFilteredAndSortedTodos,
-  } = useTodoStore();
+  const { todos, setTodos, updateTodo, deleteTodo, isLoading, setLoading } =
+    useTodoStore();
+  const displayedTodos = useTodoStore(selectFilteredAndSortedTodos);
   const { showToast } = useUiStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState(null);
@@ -98,14 +94,20 @@ const TodosPage = () => {
     }
   };
 
-  const filteredTodos = useTodoStore((state) =>
-    state.getFilteredAndSortedTodos(state),
-  );
+  const openEditModal = (todo) => {
+    setEditingTodo(todo);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 md:pb-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">My Todos</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">My Todos</h1>
+          <p className="text-gray-500">
+            You have {displayedTodos.length} tasks.
+          </p>
+        </div>
         <Button
           onClick={() => {
             setEditingTodo(null);
@@ -122,26 +124,19 @@ const TodosPage = () => {
 
       {isLoading ? (
         <LoadingSkeleton />
-      ) : filteredTodos.length === 0 ? (
+      ) : displayedTodos.length === 0 ? (
         <EmptyState
-          title={todos.length === 0 ? "No tasks yet" : "No matching tasks"}
-          description={
-            todos.length === 0
-              ? "Create your first todo to get started!"
-              : "Try adjusting your filters"
-          }
+          title="No todos found"
+          message="Create a new todo to get started."
         />
       ) : (
-        <div className="space-y-3">
-          {filteredTodos.map((todo) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {displayedTodos.map((todo) => (
             <TodoCard
               key={todo._id}
               todo={todo}
               onToggle={handleToggleTodo}
-              onEdit={(todo) => {
-                setEditingTodo(todo);
-                setIsModalOpen(true);
-              }}
+              onEdit={openEditModal}
               onDelete={handleDeleteTodo}
             />
           ))}

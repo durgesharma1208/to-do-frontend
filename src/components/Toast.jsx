@@ -1,9 +1,17 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
 import useUiStore from "../context/uiStore";
 
 const Toast = () => {
   const { toast, hideToast } = useUiStore();
+
+  // Auto-dismiss toast after 5 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(hideToast, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast, hideToast]);
 
   if (!toast) return null;
 

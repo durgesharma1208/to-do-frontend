@@ -1,6 +1,7 @@
 import { create } from "zustand";
+import { createSelector } from "reselect";
 
-const useNotesStore = create((set) => ({
+const notesStore = (set, get) => ({
   notes: [],
   isLoading: false,
   filter: "all", // all, important
@@ -20,19 +21,29 @@ const useNotesStore = create((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
   setFilter: (filter) => set({ filter }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
+});
 
-  getFilteredNotes: (state) => {
-    let filtered = state.notes;
+const useNotesStore = create(notesStore);
 
-    if (state.searchQuery) {
+// Selectors
+const selectNotes = (state) => state.notes;
+const selectFilter = (state) => state.filter;
+const selectSearchQuery = (state) => state.searchQuery;
+
+export const selectFilteredNotes = createSelector(
+  [selectNotes, selectFilter, selectSearchQuery],
+  (notes, filter, searchQuery) => {
+    let filtered = [...notes];
+
+    if (searchQuery) {
       filtered = filtered.filter(
         (note) =>
-          note.title.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-          note.content.toLowerCase().includes(state.searchQuery.toLowerCase()),
+          note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          note.content.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
-    if (state.filter === "important") {
+    if (filter === "important") {
       filtered = filtered.filter((note) => note.isImportant);
     }
 
@@ -40,6 +51,6 @@ const useNotesStore = create((set) => ({
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
     );
   },
-}));
+);
 
 export default useNotesStore;

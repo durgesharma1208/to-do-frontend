@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Spinner from "../components/Spinner";
@@ -81,6 +81,15 @@ const LoginPage = () => {
             {isSubmitting ? <Spinner size="sm" /> : "Sign In"}
           </Button>
         </form>
+
+        <div className="text-center text-sm text-gray-600 mt-4">
+          <Link
+            to="/forgot-password"
+            className="text-blue-600 hover:text-blue-700 font-semibold"
+          >
+            Forgot password?
+          </Link>
+        </div>
 
         <p className="text-center text-gray-600 mt-6">
           Don't have an account?{" "}

@@ -1,28 +1,23 @@
 import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import useNotesStore from "../context/notesStore";
+import useNotesStore, { selectFilteredNotes } from "../context/notesStore";
 import { notesService } from "../services/services";
 import NoteCard from "../components/NoteCard";
-import Toast from "../components/Toast";
 
 export default function NotesPage() {
   const {
-    notes,
     isLoading,
-    filter,
-    searchQuery,
     setNotes,
     addNote,
     setLoading,
     setFilter,
     setSearchQuery,
-    getFilteredNotes,
+    filter,
+    searchQuery,
   } = useNotesStore();
+  const filteredNotes = useNotesStore(selectFilteredNotes);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState("success");
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -40,9 +35,7 @@ export default function NotesPage() {
       const response = await notesService.getNotes();
       setNotes(response.data.data);
     } catch (error) {
-      setToastMessage("Failed to fetch notes");
-      setToastType("error");
-      setShowToast(true);
+      console.error("Failed to fetch notes:", error);
     }
     setLoading(false);
   };
@@ -51,9 +44,6 @@ export default function NotesPage() {
     e.preventDefault();
 
     if (!formData.title.trim() || !formData.content.trim()) {
-      setToastMessage("Please fill in all fields");
-      setToastType("error");
-      setShowToast(true);
       return;
     }
 
@@ -68,22 +58,11 @@ export default function NotesPage() {
         isImportant: false,
       });
       setShowModal(false);
-      setToastMessage("Note created successfully");
-      setToastType("success");
-      setShowToast(true);
     } catch (error) {
-      setToastMessage("Failed to create note");
-      setToastType("error");
-      setShowToast(true);
+      console.error("Failed to create note:", error);
     }
     setLoading(false);
   };
-
-  const filteredNotes = getFilteredNotes({
-    notes,
-    filter,
-    searchQuery,
-  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
@@ -262,14 +241,6 @@ export default function NotesPage() {
           </div>
         )}
       </div>
-
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-        />
-      )}
     </div>
   );
 }
