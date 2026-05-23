@@ -9,6 +9,7 @@ import NotesPage from "../pages/NotesPage";
 import CalendarPage from "../pages/CalendarPage";
 import ProductivityPage from "../pages/ProductivityPage";
 import ProfileSettingsPage from "../pages/ProfileSettingsPage";
+import RemindersPage from "../pages/RemindersPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
 import VerifyEmailPage from "../pages/VerifyEmailPage";
@@ -74,6 +75,15 @@ const Router = () => {
         element={
           <ProtectedRoute>
             <ProfileSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reminders"
+        element={
+          <ProtectedRoute>
+            <RemindersPage />
           </ProtectedRoute>
         }
       />

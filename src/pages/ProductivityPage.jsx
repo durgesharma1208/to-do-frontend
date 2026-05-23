@@ -5,30 +5,40 @@ import {
   Download,
   Bell,
   Calendar,
+  Edit2,
 } from "lucide-react";
 import TimeSlotCard from "../components/TimeSlotCard";
 import ProductivityStats from "../components/ProductivityStats";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import LoadingSkeleton from "../components/LoadingSkeleton";
-import Spinner from "../components/Spinner";
 import Toast from "../components/Toast";
+import ExportModal from "../components/ExportModal";
+import WakeUpTimeModal from "../components/WakeUpTimeModal";
 import useWorkLogStore from "../context/worklogStore";
 import useUiStore from "../context/uiStore";
 import useProductivityNotifications from "../hooks/useProductivityNotifications";
 import { worklogService } from "../services/services";
 import {
-  generateTimeSlots,
+  generateDynamicTimeSlots,
   formatDate,
   formatDateISO,
+  formatTimeTo12Hour,
   debounce,
   downloadFile,
-  convertToCSV,
   getWeekStart,
   getWeekEnd,
   isSameDay,
 } from "../utils/worklogHelpers";
-// import * as XLSX from "xlsx";
+import {
+  formatDateString,
+  getTodayDateString,
+  hasWakeUpTimeForDate,
+  getStoredWakeUpTime,
+  storeWakeUpTime,
+  getDefaultWakeUpTime,
+  parseLocalDateString,
+} from "../utils/dateUtils";
 
 const ProductivityPage = () => {
   const {
@@ -40,10 +50,16 @@ const ProductivityPage = () => {
     isLoading,
     selectedDate,
     setSelectedDate,
+    selectedDateStr,
+    setSelectedDateStr,
     stats,
     setStats,
     weeklyStats,
     setWeeklyStats,
+    wakeUpTime,
+    setWakeUpTime,
+    timeSlots,
+    setTimeSlots,
   } = useWorkLogStore();
 
   const { showToast } = useUiStore();
@@ -61,27 +77,46 @@ const ProductivityPage = () => {
   const [calendarDates, setCalendarDates] = useState({});
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFormat, setExportFormat] = useState("xlsx");
+  const [showWakeUpModal, setShowWakeUpModal] = useState(false);
 
   // Refs for time slot scrolling
   const timeSlotRefs = useRef({});
 
-  // Initialize
+  // Initialize on component mount
   useEffect(() => {
     const today = new Date();
+    const todayStr = formatDateString(today);
+
+    // Set initial date
     setSelectedDate(today);
-    loadWorkLogs(today);
-    loadStats(today);
-    loadWeeklyStats(today);
-    loadCalendarData(currentMonth);
+    setSelectedDateStr(todayStr);
+    setCurrentMonth(today);
+
+    // Check if wake-up time is already set for today
+    const storedWakeUpTime = getStoredWakeUpTime(todayStr);
+    if (storedWakeUpTime) {
+      setWakeUpTime(storedWakeUpTime);
+      setTimeSlots(generateDynamicTimeSlots(storedWakeUpTime));
+    } else {
+      // Show wake-up time modal
+      setShowWakeUpModal(true);
+    }
+
+    // Load data
+    loadWorkLogs(todayStr);
+    loadStats(todayStr);
+    loadWeeklyStats(todayStr);
+    loadCalendarData(today);
   }, []);
 
   // Scroll to last filled time slot when work logs load
   useEffect(() => {
     const scrollToLastFilledSlot = () => {
-      if (!selectedDate) return;
-      const dateKey = formatDateISO(selectedDate);
+      if (!selectedDateStr) return;
       const lastFilledTimeSlot = localStorage.getItem(
-        `lastFilledTimeSlot_${dateKey}`,
+        `lastFilledTimeSlot_${selectedDateStr}`,
       );
 
       if (lastFilledTimeSlot && timeSlotRefs.current[lastFilledTimeSlot]) {
@@ -97,13 +132,12 @@ const ProductivityPage = () => {
     if (!isLoading) {
       scrollToLastFilledSlot();
     }
-  }, [isLoading, selectedDate]);
+  }, [isLoading, selectedDateStr]);
 
-  // Load work logs for selected date
-  const loadWorkLogs = async (date) => {
+  // Load work logs for selected date (using dateStr)
+  const loadWorkLogs = async (dateStr) => {
     try {
       setLoading(true);
-      const dateStr = formatDateISO(date);
       const { data } = await worklogService.getLogsByDate(dateStr);
       setWorkLogs(data.data);
     } catch (error) {
@@ -114,21 +148,25 @@ const ProductivityPage = () => {
     }
   };
 
-  // Load stats for selected date
-  const loadStats = async (date) => {
+  // Load stats for selected date (using dateStr)
+  const loadStats = async (dateStr) => {
     try {
-      const dateStr = formatDateISO(date);
       const { data } = await worklogService.getProductivityStats(dateStr);
       setStats(data.data);
+
+      // Update wake-up time from stats if available
+      if (data.data.wakeUpTime) {
+        setWakeUpTime(data.data.wakeUpTime);
+        storeWakeUpTime(dateStr, data.data.wakeUpTime);
+      }
     } catch (error) {
       console.error("Error loading stats:", error);
     }
   };
 
   // Load weekly stats
-  const loadWeeklyStats = async (date) => {
+  const loadWeeklyStats = async (dateStr) => {
     try {
-      const dateStr = formatDateISO(date);
       const { data } = await worklogService.getWeeklyStats(dateStr);
       setWeeklyStats(data.data);
     } catch (error) {
@@ -141,8 +179,8 @@ const ProductivityPage = () => {
     try {
       const start = new Date(date.getFullYear(), date.getMonth(), 1);
       const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-      const startStr = formatDateISO(start);
-      const endStr = formatDateISO(end);
+      const startStr = formatDateString(start);
+      const endStr = formatDateString(end);
 
       const { data } = await worklogService.getLogsDateRange(startStr, endStr);
       setCalendarDates(data.data);
@@ -151,18 +189,41 @@ const ProductivityPage = () => {
     }
   };
 
+  // Handle wake-up time submission
+  const handleWakeUpTimeSubmit = (wakeUpTimeValue) => {
+    if (!selectedDateStr) return;
+
+    // Store wake-up time
+    storeWakeUpTime(selectedDateStr, wakeUpTimeValue);
+    setWakeUpTime(wakeUpTimeValue);
+
+    // Generate time slots
+    const slots = generateDynamicTimeSlots(wakeUpTimeValue);
+    setTimeSlots(slots);
+
+    showToast("Wake-up time set successfully!", "success");
+  };
+
+  // Handle wake-up time edit (for settings/editing)
+  const handleEditWakeUpTime = () => {
+    setShowWakeUpModal(true);
+  };
+
   // Save work log
   const handleSaveWorkLog = useCallback(
     debounce(async (timeSlot, text, isDraft) => {
+      if (!selectedDateStr) return;
+
       try {
-        const dateStr = formatDateISO(selectedDate);
+        const dateStr = selectedDateStr;
         setSavingIds((prev) => new Set([...prev, timeSlot]));
 
         const { data } = await worklogService.upsertWorkLog({
-          date: dateStr,
+          dateStr,
           timeSlot,
           text,
           isDraft,
+          wakeUpTime: wakeUpTime || getDefaultWakeUpTime(),
         });
 
         updateWorkLog(data.data._id, data.data);
@@ -190,7 +251,7 @@ const ProductivityPage = () => {
         });
       }
     }, 800),
-    [selectedDate, updateWorkLog, showToast],
+    [selectedDateStr, wakeUpTime, updateWorkLog, showToast],
   );
 
   // Delete work log
@@ -200,21 +261,36 @@ const ProductivityPage = () => {
         await worklogService.deleteWorkLog(workLogId);
         deleteWorkLog(workLogId);
         showToast("Work log deleted successfully", "success");
-        loadStats(selectedDate);
+        if (selectedDateStr) {
+          loadStats(selectedDateStr);
+        }
       } catch (error) {
         console.error("Error deleting work log:", error);
         showToast("Failed to delete work log", "error");
       }
     },
-    [selectedDate, deleteWorkLog, showToast],
+    [selectedDateStr, deleteWorkLog, showToast],
   );
 
   // Handle date selection
   const handleDateSelect = (date) => {
+    const dateStr = formatDateString(date);
+
     setSelectedDate(date);
-    loadWorkLogs(date);
-    loadStats(date);
-    loadWeeklyStats(date);
+    setSelectedDateStr(dateStr);
+
+    // Load wake-up time for selected date
+    const storedWakeUpTime = getStoredWakeUpTime(dateStr);
+    if (storedWakeUpTime) {
+      setWakeUpTime(storedWakeUpTime);
+      setTimeSlots(generateDynamicTimeSlots(storedWakeUpTime));
+    } else {
+      setTimeSlots(generateDynamicTimeSlots(getDefaultWakeUpTime()));
+    }
+
+    loadWorkLogs(dateStr);
+    loadStats(dateStr);
+    loadWeeklyStats(dateStr);
   };
 
   // Handle month navigation
@@ -259,60 +335,37 @@ const ProductivityPage = () => {
     }
   };
 
-  // Export to Excel
-  const handleExportExcel = async () => {
-    try {
-      setIsExporting(true);
-      const weekStart = getWeekStart(selectedDate);
-      const weekEnd = getWeekEnd(selectedDate);
-
-      const { data } = await worklogService.exportWorkLogs(
-        formatDateISO(weekStart),
-        formatDateISO(weekEnd),
-      );
-
-      // Dynamic import to avoid loading XLSX if not needed
-      const XLSX = await import("xlsx");
-      const ws = XLSX.utils.json_to_sheet(data.data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Work Logs");
-      XLSX.writeFile(
-        wb,
-        `WorkLogs_${formatDateISO(weekStart)}_to_${formatDateISO(weekEnd)}.xlsx`,
-      );
-
-      showToast("Exported to Excel successfully", "success");
-    } catch (error) {
-      console.error("Error exporting:", error);
-      showToast("Failed to export to Excel", "error");
-    } finally {
-      setIsExporting(false);
-    }
+  const openExportModal = (format) => {
+    setExportFormat(format);
+    setShowExportModal(true);
   };
 
-  // Export to CSV
-  const handleExportCSV = async () => {
+  const handleExportSubmit = async ({ startDate, endDate }) => {
     try {
+      setShowExportModal(false);
       setIsExporting(true);
-      const weekStart = getWeekStart(selectedDate);
-      const weekEnd = getWeekEnd(selectedDate);
 
-      const { data } = await worklogService.exportWorkLogs(
-        formatDateISO(weekStart),
-        formatDateISO(weekEnd),
+      const response = await worklogService.exportWorkLogs(
+        startDate,
+        endDate,
+        exportFormat,
       );
 
-      const csv = convertToCSV(data.data);
-      downloadFile(
-        csv,
-        `WorkLogs_${formatDateISO(weekStart)}_to_${formatDateISO(weekEnd)}.csv`,
-        "text/csv",
-      );
+      const mimeType =
+        exportFormat === "csv"
+          ? "text/csv"
+          : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      const extension = exportFormat === "csv" ? "csv" : "xlsx";
+      const filename = `Productivity_${startDate}_to_${endDate}.${extension}`;
 
-      showToast("Exported to CSV successfully", "success");
+      downloadFile(response.data, filename, mimeType);
+      showToast(
+        `Exported to ${exportFormat.toUpperCase()} successfully`,
+        "success",
+      );
     } catch (error) {
       console.error("Error exporting:", error);
-      showToast("Failed to export to CSV", "error");
+      showToast(`Failed to export to ${exportFormat.toUpperCase()}`, "error");
     } finally {
       setIsExporting(false);
     }
@@ -341,10 +394,24 @@ const ProductivityPage = () => {
     );
   }
 
-  const timeSlots = generateTimeSlots();
-
   return (
     <div className="space-y-6 pb-6">
+      {/* Wake-Up Time Modal */}
+      <WakeUpTimeModal
+        isOpen={showWakeUpModal}
+        onClose={() => setShowWakeUpModal(false)}
+        onSubmit={handleWakeUpTimeSubmit}
+        currentDate={selectedDateStr}
+      />
+
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onSubmit={handleExportSubmit}
+        currentDate={selectedDate}
+        exportFormat={exportFormat}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -420,7 +487,7 @@ const ProductivityPage = () => {
                   return <div key={`empty-${index}`} className="h-8" />;
                 }
 
-                const dateKey = formatDateISO(date);
+                const dateKey = formatDateString(date);
                 const hasLogs =
                   calendarDates[dateKey] && calendarDates[dateKey].length > 0;
                 const isToday = isSameDay(date, new Date());
@@ -449,7 +516,7 @@ const ProductivityPage = () => {
             {/* Export buttons */}
             <div className="mt-6 space-y-2">
               <button
-                onClick={handleExportExcel}
+                onClick={() => openExportModal("xlsx")}
                 disabled={isExporting}
                 className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600 disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-700"
               >
@@ -457,7 +524,7 @@ const ProductivityPage = () => {
                 {isExporting ? "Exporting..." : "Export to Excel"}
               </button>
               <button
-                onClick={handleExportCSV}
+                onClick={() => openExportModal("csv")}
                 disabled={isExporting}
                 className="w-full flex items-center justify-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-600 disabled:opacity-50 dark:bg-green-600 dark:hover:bg-green-700"
               >
@@ -471,16 +538,32 @@ const ProductivityPage = () => {
         {/* Time Slots */}
         <div className="space-y-4 lg:col-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50">
-              {selectedDate && formatDate(selectedDate)}
-            </h2>
-            <button
-              onClick={handleToday}
-              className="flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
-            >
-              <Calendar className="h-4 w-4" />
-              Go to Today
-            </button>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50">
+                {selectedDate && formatDate(selectedDate)}
+              </h2>
+              {wakeUpTime && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Wake-up time: {formatTimeTo12Hour(wakeUpTime)}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleEditWakeUpTime}
+                className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              >
+                <Edit2 className="h-4 w-4" />
+                Edit Wake Time
+              </button>
+              <button
+                onClick={handleToday}
+                className="flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
+              >
+                <Calendar className="h-4 w-4" />
+                Go to Today
+              </button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -491,32 +574,47 @@ const ProductivityPage = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {timeSlots.map((timeSlot) => {
-                const log = workLogs.find((l) => l.timeSlot === timeSlot);
-                return (
-                  <div
-                    key={timeSlot}
-                    ref={(el) => {
-                      if (el) timeSlotRefs.current[timeSlot] = el;
-                    }}
-                  >
-                    <TimeSlotCard
-                      timeSlot={timeSlot}
-                      initialText={log?.text || ""}
-                      isDraft={log?.isDraft || false}
-                      isSaving={savingIds.has(timeSlot)}
-                      onSave={(data) => {
-                        handleSaveWorkLog(timeSlot, data.text, data.isDraft);
+              {timeSlots.length > 0 ? (
+                timeSlots.map((slotInfo) => {
+                  const log = workLogs.find(
+                    (l) => l.timeSlot === slotInfo.time24,
+                  );
+                  return (
+                    <div
+                      key={slotInfo.time24}
+                      ref={(el) => {
+                        if (el) timeSlotRefs.current[slotInfo.time24] = el;
                       }}
-                      onDelete={() => {
-                        if (log) {
-                          handleDeleteWorkLog(log._id);
-                        }
-                      }}
-                    />
-                  </div>
-                );
-              })}
+                    >
+                      <TimeSlotCard
+                        timeSlot={slotInfo.display}
+                        time24={slotInfo.time24}
+                        initialText={log?.text || ""}
+                        isDraft={log?.isDraft || false}
+                        isSaving={savingIds.has(slotInfo.time24)}
+                        onSave={(data) => {
+                          handleSaveWorkLog(
+                            slotInfo.time24,
+                            data.text,
+                            data.isDraft,
+                          );
+                        }}
+                        onDelete={() => {
+                          if (log) {
+                            handleDeleteWorkLog(log._id);
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center dark:border-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    No time slots available. Please set a wake-up time.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

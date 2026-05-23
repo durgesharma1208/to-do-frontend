@@ -8,6 +8,7 @@ import {
   User,
   Calendar,
   Flame,
+  Bell,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import useUiStore from "../context/uiStore";
@@ -22,6 +23,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   const settingsItems = [
+    { icon: Bell, label: "Reminders", path: "/reminders" },
     { icon: User, label: "Profile Settings", path: "/profile-settings" },
   ];
 

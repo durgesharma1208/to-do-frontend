@@ -58,5 +58,6 @@ export const worklogService = {
   exportWorkLogs: (startDate, endDate, format = "xlsx") =>
     api.get("/worklogs/export", {
       params: { startDate, endDate, format },
+      responseType: "blob",
     }),
 };

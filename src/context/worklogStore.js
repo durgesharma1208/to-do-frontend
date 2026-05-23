@@ -1,17 +1,21 @@
 import { create } from "zustand";
+import { formatDateString } from "../utils/dateUtils";
 
 const worklogStore = (set, get) => ({
   workLogs: [],
-  workLogsMap: {}, // Map of dates to their logs
+  workLogsMap: {}, // Map of log IDs to logs
   isLoading: false,
   selectedDate: null,
+  selectedDateStr: null, // YYYY-MM-DD format
   stats: null,
   weeklyStats: null,
+  wakeUpTime: null, // Current day's wake-up time
+  timeSlots: [], // Dynamic time slots for current day
 
   // Set all work logs
   setWorkLogs: (workLogs) => {
     set({ workLogs });
-    // Create a map for quick access
+    // Create a map for quick access by ID
     const map = {};
     workLogs.forEach((log) => {
       if (!map[log._id]) {
@@ -82,8 +86,16 @@ const worklogStore = (set, get) => ({
   // Set loading state
   setLoading: (isLoading) => set({ isLoading }),
 
-  // Set selected date
-  setSelectedDate: (selectedDate) => set({ selectedDate }),
+  // Set selected date (Date object)
+  setSelectedDate: (selectedDate) => {
+    const dateStr = selectedDate ? formatDateString(selectedDate) : null;
+    set({ selectedDate, selectedDateStr: dateStr });
+  },
+
+  // Set selected date string directly (YYYY-MM-DD format)
+  setSelectedDateStr: (dateStr) => {
+    set({ selectedDateStr: dateStr });
+  },
 
   // Set stats
   setStats: (stats) => set({ stats }),
@@ -91,15 +103,17 @@ const worklogStore = (set, get) => ({
   // Set weekly stats
   setWeeklyStats: (weeklyStats) => set({ weeklyStats }),
 
-  // Get work logs for a specific date
-  getLogsForDate: (date) => {
+  // Set wake-up time for current day
+  setWakeUpTime: (wakeUpTime) => set({ wakeUpTime }),
+
+  // Set time slots for current day
+  setTimeSlots: (timeSlots) => set({ timeSlots }),
+
+  // Get work logs for a specific date (by dateStr: YYYY-MM-DD)
+  getLogsForDate: (dateStr) => {
     const state = get();
-    if (!date) return [];
-    const dateStr = new Date(date).toISOString().split("T")[0];
-    return state.workLogs.filter((log) => {
-      const logDateStr = new Date(log.date).toISOString().split("T")[0];
-      return logDateStr === dateStr;
-    });
+    if (!dateStr) return [];
+    return state.workLogs.filter((log) => log.dateStr === dateStr);
   },
 
   // Get work log by ID
@@ -114,6 +128,9 @@ const worklogStore = (set, get) => ({
       workLogsMap: {},
       stats: null,
       selectedDate: null,
+      selectedDateStr: null,
+      wakeUpTime: null,
+      timeSlots: [],
     }),
 });
 

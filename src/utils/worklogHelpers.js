@@ -1,3 +1,11 @@
+import {
+  generateDynamicTimeSlots as generateDynamicSlotsFromDateUtils,
+  convertTo12HourFormat as convert12HourFromDateUtils,
+  convertTo24HourFormat,
+  formatDateString,
+  getTodayDateString,
+} from "./dateUtils";
+
 /**
  * Generate all 30-minute time slots for a day
  * @returns {string[]} Array of time slots in HH:MM format
@@ -11,6 +19,24 @@ export const generateTimeSlots = () => {
     slots.push(timeSlot);
   }
   return slots;
+};
+
+/**
+ * Generate dynamic time slots based on wake-up time
+ * @param {string} wakeUpTime - Time in HH:MM format (24-hour)
+ * @returns {Array<{time24: string, time12: string, display: string}>} Array of time slots
+ */
+export const generateDynamicTimeSlots = (wakeUpTime = "05:00") => {
+  return generateDynamicSlotsFromDateUtils(wakeUpTime);
+};
+
+/**
+ * Convert time to 12-hour AM/PM format
+ * @param {string} time24 - Time in HH:MM format (24-hour)
+ * @returns {string} Time in h:MM AM/PM format
+ */
+export const formatTimeTo12Hour = (time24) => {
+  return convert12HourFromDateUtils(time24);
 };
 
 /**
@@ -29,13 +55,12 @@ export const formatDate = (date) => {
 };
 
 /**
- * Format date to YYYY-MM-DD format
+ * Format date to YYYY-MM-DD format (local timezone)
  * @param {Date|string} date
  * @returns {string} Formatted date string
  */
 export const formatDateISO = (date) => {
-  const d = new Date(date);
-  return d.toISOString().split("T")[0];
+  return formatDateString(date);
 };
 
 /**
@@ -63,6 +88,26 @@ export const getWeekEnd = (date) => {
 };
 
 /**
+ * Get start of month date
+ * @param {Date} date
+ * @returns {Date}
+ */
+export const getMonthStart = (date) => {
+  const d = new Date(date);
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+};
+
+/**
+ * Get end of month date
+ * @param {Date} date
+ * @returns {Date}
+ */
+export const getMonthEnd = (date) => {
+  const d = new Date(date);
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+};
+
+/**
  * Check if dates are the same day
  * @param {Date|string} date1
  * @param {Date|string} date2
@@ -79,44 +124,15 @@ export const isSameDay = (date1, date2) => {
 };
 
 /**
- * Parse work log export data and convert to CSV
- * @param {Array} data - Array of work log objects
- * @returns {string} CSV formatted string
- */
-export const convertToCSV = (data) => {
-  if (!data || data.length === 0) return "";
-
-  const headers = Object.keys(data[0]);
-  const csvHeaders = headers.join(",");
-
-  const csvRows = data.map((row) =>
-    headers
-      .map((header) => {
-        const value = row[header];
-        // Escape quotes and wrap in quotes if contains comma
-        if (
-          typeof value === "string" &&
-          (value.includes(",") || value.includes('"'))
-        ) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return value;
-      })
-      .join(","),
-  );
-
-  return [csvHeaders, ...csvRows].join("\n");
-};
-
-/**
  * Download file with given content and filename
- * @param {string} content - File content
+ * @param {string|Blob} content - File content or Blob
  * @param {string} filename - Name of the file to download
  * @param {string} mimeType - MIME type of the file
  */
 export const downloadFile = (content, filename, mimeType = "text/plain") => {
-  const blob = new Blob([content], { type: mimeType });
-  const url = window.URL.createObjectURL(blob);
+  const fileBlob =
+    content instanceof Blob ? content : new Blob([content], { type: mimeType });
+  const url = window.URL.createObjectURL(fileBlob);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
