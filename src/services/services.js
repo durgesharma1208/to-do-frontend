@@ -61,3 +61,7 @@ export const worklogService = {
       responseType: "blob",
     }),
 };
+
+export const notificationService = {
+  updateFCMToken: (data) => api.post("/notifications/token", data),
+};

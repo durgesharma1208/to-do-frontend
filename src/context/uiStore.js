@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 const useUiStore = create((set) => ({
   darkMode: localStorage.getItem("darkMode") === "true" || false,
-  sidebarOpen: window.innerWidth > 768,
+  sidebarOpen: typeof window !== "undefined" && window.innerWidth > 768,
   toast: null,
 
   toggleDarkMode: () =>

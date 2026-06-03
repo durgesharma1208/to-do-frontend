@@ -13,8 +13,14 @@ import useUiStore from "../context/uiStore";
 import { todoService } from "../services/services";
 
 const TodosPage = () => {
-  const { todos, setTodos, updateTodo, deleteTodo, isLoading, setLoading } =
-    useTodoStore();
+  const {
+    setTodos,
+    addTodo,
+    updateTodo,
+    deleteTodo,
+    isLoading,
+    setLoading,
+  } = useTodoStore();
   const displayedTodos = useTodoStore(selectFilteredAndSortedTodos);
   const { showToast } = useUiStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,20 +28,20 @@ const TodosPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    const loadTodos = async () => {
+      try {
+        setLoading(true);
+        const { data } = await todoService.getTodos();
+        setTodos(data.data);
+      } catch (error) {
+        showToast("Failed to load todos", "error");
+      } finally {
+        setLoading(false);
+      }
+    };
     loadTodos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const loadTodos = async () => {
-    try {
-      setLoading(true);
-      const { data } = await todoService.getTodos();
-      setTodos(data.data);
-    } catch (error) {
-      showToast("Failed to load todos", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCreateOrUpdate = async (values) => {
     try {
@@ -49,15 +55,12 @@ const TodosPage = () => {
       };
 
       if (editingTodo) {
-        const { data } = await todoService.updateTodo(
-          editingTodo._id,
-          submitData,
-        );
+        const { data } = await todoService.updateTodo(editingTodo._id, submitData);
         updateTodo(editingTodo._id, data.data);
         showToast("Todo updated successfully", "success");
       } else {
         const { data } = await todoService.createTodo(submitData);
-        setTodos([data.data, ...todos]);
+        addTodo(data.data);
         showToast("Todo created successfully", "success");
       }
 

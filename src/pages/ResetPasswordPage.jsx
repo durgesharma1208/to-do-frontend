@@ -2,17 +2,15 @@ import { useState } from "react";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { authService } from "../services/services";
-import Toast from "../components/Toast";
+import useUiStore from "../context/uiStore";
 
 export default function ResetPasswordPage() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useUiStore();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState("success");
   const [submitted, setSubmitted] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -24,23 +22,17 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     if (!formData.newPassword || !formData.confirmPassword) {
-      setToastMessage("Please fill in all fields");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Please fill in all fields", "error");
       return;
     }
 
     if (formData.newPassword.length < 6) {
-      setToastMessage("Password must be at least 6 characters");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Password must be at least 6 characters", "error");
       return;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      setToastMessage("Passwords do not match");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Passwords do not match", "error");
       return;
     }
 
@@ -51,19 +43,17 @@ export default function ResetPasswordPage() {
         confirmPassword: formData.confirmPassword,
       });
       setSubmitted(true);
-      setToastMessage("Password reset successfully!");
-      setToastType("success");
-      setShowToast(true);
+      showToast("Password reset successfully!", "success");
       setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
-      setToastMessage(
+      showToast(
         error.response?.data?.message ||
           "Failed to reset password. The link may have expired.",
+        "error",
       );
-      setToastType("error");
-      setShowToast(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -190,14 +180,6 @@ export default function ResetPasswordPage() {
           </p>
         </div>
       </div>
-
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-        />
-      )}
     </div>
   );
 }

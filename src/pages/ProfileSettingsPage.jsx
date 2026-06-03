@@ -2,15 +2,13 @@ import { useState } from "react";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { authService } from "../services/services";
 import useAuthStore from "../context/authStore";
-import Toast from "../components/Toast";
+import useUiStore from "../context/uiStore";
 
 export default function ProfileSettingsPage() {
   const { user } = useAuthStore();
+  const { showToast } = useUiStore();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState("success");
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -29,23 +27,17 @@ export default function ProfileSettingsPage() {
       !formData.newPassword ||
       !formData.confirmPassword
     ) {
-      setToastMessage("Please fill in all fields");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Please fill in all fields", "error");
       return;
     }
 
     if (formData.newPassword.length < 6) {
-      setToastMessage("New password must be at least 6 characters");
-      setToastType("error");
-      setShowToast(true);
+      showToast("New password must be at least 6 characters", "error");
       return;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      setToastMessage("Passwords do not match");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Passwords do not match", "error");
       return;
     }
 
@@ -62,18 +54,16 @@ export default function ProfileSettingsPage() {
         newPassword: "",
         confirmPassword: "",
       });
-      setToastMessage("Password changed successfully");
-      setToastType("success");
-      setShowToast(true);
+      showToast("Password changed successfully", "success");
     } catch (error) {
-      setToastMessage(
+      showToast(
         error.response?.data?.message ||
           "Failed to change password. Please try again.",
+        "error",
       );
-      setToastType("error");
-      setShowToast(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -295,14 +285,6 @@ export default function ProfileSettingsPage() {
           </div>
         </div>
       </div>
-
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-        />
-      )}
     </div>
   );
 }

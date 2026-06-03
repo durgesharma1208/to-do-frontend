@@ -6,7 +6,7 @@ import { todoService } from "../services/services";
 import Toast from "../components/Toast";
 
 export default function CalendarPage() {
-  const { todos, addTodo, setLoading } = useTodoStore();
+  const { todos, setTodos, addTodo, setLoading } = useTodoStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -22,6 +22,21 @@ export default function CalendarPage() {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  useEffect(() => {
+    const loadTodos = async () => {
+      if (todos.length > 0) return;
+
+      try {
+        const { data } = await todoService.getTodos();
+        setTodos(data.data);
+      } catch (error) {
+        console.error("Failed to load todos for calendar:", error);
+      }
+    };
+
+    loadTodos();
+  }, [setTodos, todos.length]);
 
   // Get tasks for a specific date
   const getTasksForDate = (date) => {

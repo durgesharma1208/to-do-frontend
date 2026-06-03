@@ -26,19 +26,20 @@ export default function NotesPage() {
   });
 
   useEffect(() => {
+    const fetchNotes = async () => {
+      setLoading(true);
+      try {
+        const response = await notesService.getNotes();
+        setNotes(response.data.data);
+      } catch (error) {
+        console.error("Failed to fetch notes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchNotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchNotes = async () => {
-    setLoading(true);
-    try {
-      const response = await notesService.getNotes();
-      setNotes(response.data.data);
-    } catch (error) {
-      console.error("Failed to fetch notes:", error);
-    }
-    setLoading(false);
-  };
 
   const handleCreateNote = async (e) => {
     e.preventDefault();

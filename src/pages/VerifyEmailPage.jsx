@@ -2,56 +2,62 @@ import { useState, useEffect } from "react";
 import { CheckCircle, Mail, AlertCircle } from "lucide-react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { authService } from "../services/services";
-import Toast from "../components/Toast";
+import useUiStore from "../context/uiStore";
 
 export default function VerifyEmailPage() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useUiStore();
   const [loading, setLoading] = useState(true);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState(false);
   const [email, setEmail] = useState("");
   const [resending, setResending] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
-    verifyEmail();
-  }, [token]);
-
-  const verifyEmail = async () => {
-    setLoading(true);
-    try {
-      await authService.verifyEmail(token);
-      setVerified(true);
-      setError(false);
-      setTimeout(() => navigate("/login"), 3000);
-    } catch (error) {
+    if (!token) {
       setError(true);
-      setVerified(false);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  };
+
+    const verifyEmail = async () => {
+      setLoading(true);
+      try {
+        await authService.verifyEmail(token);
+        setVerified(true);
+        setError(false);
+        setTimeout(() => navigate("/login"), 3000);
+      } catch {
+        setError(true);
+        setVerified(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyEmail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const handleResendEmail = async () => {
     if (!email) {
-      setToastMessage("Please enter your email");
-      setShowToast(true);
+      showToast("Please enter your email", "error");
       return;
     }
 
     setResending(true);
     try {
       await authService.resendVerificationEmail({ email });
-      setToastMessage("Verification email sent!");
-      setShowToast(true);
-    } catch (error) {
-      setToastMessage(
-        error.response?.data?.message || "Failed to resend verification email",
+      showToast("Verification email sent!", "success");
+    } catch (err) {
+      showToast(
+        err.response?.data?.message || "Failed to resend verification email",
+        "error",
       );
-      setShowToast(true);
+    } finally {
+      setResending(false);
     }
-    setResending(false);
   };
 
   return (
@@ -157,14 +163,6 @@ export default function VerifyEmailPage() {
           </div>
         </div>
       </div>
-
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          onClose={() => setShowToast(false)}
-          type={toastMessage.includes("failed") ? "error" : "success"}
-        />
-      )}
     </div>
   );
 }

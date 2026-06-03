@@ -2,23 +2,19 @@ import { useState } from "react";
 import { Mail, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { authService } from "../services/services";
-import Toast from "../components/Toast";
+import useUiStore from "../context/uiStore";
 
 export default function ForgotPasswordPage() {
+  const { showToast } = useUiStore();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState("success");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!email) {
-      setToastMessage("Please enter your email");
-      setToastType("error");
-      setShowToast(true);
+      showToast("Please enter your email", "error");
       return;
     }
 
@@ -26,18 +22,16 @@ export default function ForgotPasswordPage() {
     try {
       await authService.forgotPassword({ email });
       setSubmitted(true);
-      setToastMessage("Reset email sent successfully!");
-      setToastType("success");
-      setShowToast(true);
+      showToast("Reset email sent successfully!", "success");
     } catch (error) {
-      setToastMessage(
+      showToast(
         error.response?.data?.message ||
           "Failed to send reset email. Please try again.",
+        "error",
       );
-      setToastType("error");
-      setShowToast(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -128,14 +122,6 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
       </div>
-
-      {showToast && (
-        <Toast
-          message={toastMessage}
-          type={toastType}
-          onClose={() => setShowToast(false)}
-        />
-      )}
     </div>
   );
 }

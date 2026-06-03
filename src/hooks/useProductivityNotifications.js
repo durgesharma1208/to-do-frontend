@@ -85,6 +85,7 @@ const useProductivityNotifications = (enabled = true) => {
   };
 
   // Cleanup on unmount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (enabled) {
       startNotifications();
@@ -93,6 +94,10 @@ const useProductivityNotifications = (enabled = true) => {
     return () => {
       stopNotifications();
     };
+    // startNotifications and stopNotifications are stable refs defined inside
+    // this component; including them would cause the effect to re-run on
+    // every render. The intentional dependency here is only `enabled`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
 
   return {

@@ -127,6 +127,7 @@ const worklogStore = (set, get) => ({
       workLogs: [],
       workLogsMap: {},
       stats: null,
+      weeklyStats: null,
       selectedDate: null,
       selectedDateStr: null,
       wakeUpTime: null,

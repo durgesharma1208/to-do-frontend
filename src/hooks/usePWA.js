@@ -1,11 +1,4 @@
-import { useEffect } from "react";
-
-export const usePWA = () => {
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch((error) => {
-        console.log("SW registration failed:", error);
-      });
-    }
-  }, []);
-};
+// PWA service worker registration is handled automatically by vite-plugin-pwa
+// via the virtual:pwa-register module in main.jsx.
+// No manual registration needed here.
+export const usePWA = () => {};

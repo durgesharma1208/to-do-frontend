@@ -1,79 +1,61 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
-const useAuthStore = create(
-  persist(
-    (set, get) => ({
-      user: null,
-      token: null,
-      isLoading: true, // Start with loading true
-      isInitialized: false, // To check if we have checked localStorage
+const useAuthStore = create((set, get) => ({
+  user: null,
+  token: null,
+  isLoading: true,
+  isInitialized: false,
 
-      // Action to initialize the store from localStorage
-      initialize: () => {
-        const token = localStorage.getItem("token");
-        const user = JSON.parse(localStorage.getItem("user"));
-        if (token && user) {
-          set({ user, token, isInitialized: true, isLoading: false });
-        } else {
-          set({ isInitialized: true, isLoading: false });
-        }
-      },
+  // Initialize from localStorage
+  initialize: () => {
+    try {
+      const token = localStorage.getItem("token");
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
 
-      // Action to set user and token
-      login: (user, token) => {
-        set({ user, token });
-      },
+      set({
+        token: token || null,
+        user: user || null,
+        isInitialized: true,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error("Failed to initialize auth:", error);
+      set({
+        isInitialized: true,
+        isLoading: false,
+      });
+    }
+  },
 
-      // Alias for login - used by RegisterPage
-      setUser: (user, token) => {
-        set({ user, token });
-      },
+  // Set user and token (from login/register)
+  login: (user, token) => {
+    set({ user, token });
+    // Persist to localStorage
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+  },
 
-      // Action to log out
-      logout: () => {
-        set({ user: null, token: null });
-      },
+  // Alias for compatibility
+  setUser: (user, token) => {
+    set({ user, token });
+    // Persist to localStorage
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+  },
 
-      setLoading: (isLoading) => set({ isLoading }),
-    }),
-    {
-      name: "auth-storage", // unique name
-      storage: {
-        getItem: (name) => {
-          const str = localStorage.getItem(name);
-          if (!str) return null;
-          const { state } = JSON.parse(str);
-          return {
-            state: {
-              ...state,
-              isInitialized: false, // Don't persist initialization status
-              isLoading: true, // Always start in a loading state on refresh
-            },
-          };
-        },
-        setItem: (name, newValue) => {
-          // Omit non-persistent state
-          const { state } = newValue;
-          const toPersist = {
-            user: state.user,
-            token: state.token,
-          };
-          localStorage.setItem(
-            name,
-            JSON.stringify({
-              state: toPersist,
-              version: newValue.version,
-            }),
-          );
-        },
-        removeItem: (name) => localStorage.removeItem(name),
-      },
-    },
-  ),
-);
+  // Logout
+  logout: () => {
+    set({ user: null, token: null });
+    // Clear from localStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  },
 
-// Initialize the store on application load
+  setLoading: (isLoading) => set({ isLoading }),
+}));
+
+// Initialize on app load
 useAuthStore.getState().initialize();
 
 export default useAuthStore;

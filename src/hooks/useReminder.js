@@ -22,7 +22,7 @@ const DEFAULT_SOUND = "bell";
 export const useReminder = () => {
   // State for reminder settings
   const [isEnabled, setIsEnabled] = useState(false);
-  const [interval, setInterval] = useState(DEFAULT_INTERVAL);
+  const [intervalMinutes, setIntervalMinutes] = useState(DEFAULT_INTERVAL);
   const [selectedSound, setSelectedSound] = useState(DEFAULT_SOUND);
   const [permissionStatus, setPermissionStatus] = useState("default");
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +46,7 @@ export const useReminder = () => {
         if (saved) {
           const settings = JSON.parse(saved);
           setIsEnabled(settings.isEnabled || false);
-          setInterval(settings.interval || DEFAULT_INTERVAL);
+          setIntervalMinutes(settings.interval || DEFAULT_INTERVAL);
           setSelectedSound(settings.selectedSound || DEFAULT_SOUND);
 
           // Mark that we should auto-start if reminders were enabled
@@ -127,7 +127,7 @@ export const useReminder = () => {
    * Start reminders
    */
   const startReminder = useCallback(
-    async (intervalMinutes = interval, soundKey = selectedSound) => {
+    async (overrideInterval = intervalMinutes, soundKey = selectedSound) => {
       // Prevent multiple intervals
       if (intervalIdRef.current) {
         console.warn("Reminder already running. Stop it first.");
@@ -151,29 +151,29 @@ export const useReminder = () => {
 
         // Trigger first reminder immediately
         notificationService.sendReminder(
-          "Reminder started! Next one in " + intervalMinutes + " minutes.",
+          "Reminder started! Next one in " + overrideInterval + " minutes.",
         );
 
         // Set up interval - convert minutes to milliseconds
-        const intervalMs = intervalMinutes * 60 * 1000;
-        intervalIdRef.current = setInterval(() => {
+        const intervalMs = overrideInterval * 60 * 1000;
+        intervalIdRef.current = window.setInterval(() => {
           triggerReminder();
         }, intervalMs);
 
         setIsEnabled(true);
-        setInterval(intervalMinutes);
+        setIntervalMinutes(overrideInterval);
         setSelectedSound(soundKey);
         setError(null);
 
         // Save to localStorage
         saveSettings({
           isEnabled: true,
-          interval: intervalMinutes,
+          interval: overrideInterval,
           selectedSound: soundKey,
         });
 
         console.log(
-          `Reminder started: ${intervalMinutes} minutes, sound: ${soundKey}`,
+          `Reminder started: ${overrideInterval} minutes, sound: ${soundKey}`,
         );
         return true;
       } catch (err) {
@@ -183,7 +183,7 @@ export const useReminder = () => {
       }
     },
     [
-      interval,
+      intervalMinutes,
       selectedSound,
       permissionStatus,
       requestPermission,
@@ -197,7 +197,7 @@ export const useReminder = () => {
    */
   const stopReminder = useCallback(() => {
     if (intervalIdRef.current) {
-      clearInterval(intervalIdRef.current);
+      window.clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
       setIsEnabled(false);
       setError(null);
@@ -205,7 +205,7 @@ export const useReminder = () => {
       // Save to localStorage
       saveSettings({
         isEnabled: false,
-        interval,
+        interval: intervalMinutes,
         selectedSound,
       });
 
@@ -213,7 +213,7 @@ export const useReminder = () => {
       return true;
     }
     return false;
-  }, [interval, selectedSound, saveSettings]);
+  }, [intervalMinutes, selectedSound, saveSettings]);
 
   /**
    * Toggle reminders on/off
@@ -277,7 +277,7 @@ export const useReminder = () => {
     (newInterval) => {
       // Validate interval
       const validInterval = Math.max(1, Math.min(1440, newInterval)); // 1-1440 minutes (1 day)
-      setInterval(validInterval);
+      setIntervalMinutes(validInterval);
 
       // If reminder is running, restart with new interval
       if (isEnabled) {
@@ -302,11 +302,11 @@ export const useReminder = () => {
       setSelectedSound(newSound);
       saveSettings({
         isEnabled,
-        interval,
+        interval: intervalMinutes,
         selectedSound: newSound,
       });
     },
-    [isEnabled, interval, saveSettings],
+    [isEnabled, intervalMinutes, saveSettings],
   );
 
   /**
@@ -315,7 +315,7 @@ export const useReminder = () => {
   useEffect(() => {
     return () => {
       if (intervalIdRef.current) {
-        clearInterval(intervalIdRef.current);
+        window.clearInterval(intervalIdRef.current);
         intervalIdRef.current = null;
       }
       // Optionally clear audio cache to free memory
@@ -332,17 +332,17 @@ export const useReminder = () => {
       shouldAutoStartRef.current &&
       permissionStatus === "granted" &&
       !isEnabled &&
-      interval > 0
+      intervalMinutes > 0
     ) {
       shouldAutoStartRef.current = false; // Only run once
-      startReminder(interval, selectedSound);
+      startReminder(intervalMinutes, selectedSound);
     }
-  }, [permissionStatus, isEnabled, interval, selectedSound, startReminder]);
+  }, [permissionStatus, isEnabled, intervalMinutes, selectedSound, startReminder]);
 
   return {
     // State
     isEnabled,
-    interval,
+    interval: intervalMinutes,
     selectedSound,
     permissionStatus,
     isLoading,
