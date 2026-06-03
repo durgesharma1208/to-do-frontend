@@ -185,8 +185,9 @@ export const generateToken = async ({ force = false } = {}) => {
         console.log("FCM token already synced. Skipping update.");
       }
 
-      console.log("FCM token ready:", token);
-      return token;
+     console.log("FCM token ready:", token);
+alert(token);
+return token;
     } catch (error) {
       console.error("Error generating FCM token:", error);
       return null;
